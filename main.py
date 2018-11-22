@@ -11,7 +11,7 @@ def main():
 
     stockInfo = StockInfo()
 
-    stockInfo.get_daily_price('000000')
+    stockInfo.get_daily_price('215600')
 
     dialog = InitDialog(stockInfo)
     dialog.exec_()

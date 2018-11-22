@@ -15,9 +15,9 @@ class Worker(QtCore.QThread):
     def run(self):
         while True:
             cnt = 0
-            codes = self.stockInfo.getCodes()
+            codes = self.stockInfo.get_codes()
             for code in codes:
-                self.stockInfo.getDayData(code)
+                #self.stockInfo.get_daily_price(code)
 
                 cnt += 1
                 pos = (cnt / len(codes)) * 100
