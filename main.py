@@ -11,19 +11,13 @@ def main():
 
     stockInfo = StockInfo()
 
+    stockInfo.get_daily_price('000000')
+
     dialog = InitDialog(stockInfo)
     dialog.exec_()
     
     w = CWindow()
     w.show()
-
-
-    
-
-
-    
-    #stockInfo.getAllItem()
-    #stockInfo.getDayData('011150')
 
 
     app.exec_()
