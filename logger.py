@@ -32,12 +32,12 @@ class Singleton(object):
 
 
 class MyLogger(Singleton):
-    def __init__(self):
+    def __init__(self, logType):
         self._logger = logging.getLogger("Bithumb")
         self._logger.setLevel(logging.DEBUG)
         self.formatter = logging.Formatter('[%(levelname)s|%(filename)s:%(lineno)s] %(asctime)s (%(funcName)s) %(message)s')
 
-        log_dir = "log"
+        log_dir = logType
         import os
         if not os.path.exists(log_dir):
             os.makedirs(log_dir)

@@ -6,3 +6,18 @@ from logger import MyLogger
 
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
+
+
+class CWindow(QtWidgets.QWidget):
+
+    def __init__(self):
+        super().__init__()
+        uic.loadUi("ViewMain.ui", self)
+
+        self.logBuySell = MyLogger('buysell')
+        self.logBuySell.SetLogView(self.buysellLog)
+
+        self.logDebug = MyLogger('debug')
+        self.logDebug.SetLogView(self.debugLog)
+
+        
