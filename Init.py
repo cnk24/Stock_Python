@@ -18,10 +18,12 @@ class Worker(QtCore.QThread):
             codes = self.stockInfo.get_codes()
             for code in codes:
                 #self.stockInfo.get_daily_price(code)
+                self.stockInfo.load_save_daily(code)
 
                 cnt += 1
                 pos = (cnt / len(codes)) * 100
                 self.change_value.emit(pos)
+                self.msleep(50)
 
             self.finished.emit()
             break

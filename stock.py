@@ -1,29 +1,138 @@
+import os
 import pandas as pd
 import FinanceDataReader as fdr
 from datetime import datetime, timedelta
 
+from pandas_datareader import data as pdr
+import fix_yahoo_finance as yf
 
-class StockInfo:    
-    m_code_df = None
-    m_day_data = dict()
+# PostgreSQL DB 사용
+# Table : stock
+#         - code, date, open, high, low, close, adj close, volume
+
+
+class StockInfo:
+    m_code_df = []
+    m_daily_data = dict()
 
     def __init__(self):
+        yf.pdr_override()
         self.load_all_items()
     
     def load_all_items(self):
-        # 한국 거래소의 모든 종목 가져오기
-        df = fdr.StockListing('KRX')
-        df = df[['Symbol', 'Name']]
-        df = df.rename(columns={'Symbol': 'code', 'Name': 'name'})
+        df = pd.DataFrame()
+
+        df_kospi = fdr.StockListing('KOSPI')
+        df_kospi = df_kospi[['Symbol', 'Name']]
+        df_kospi = df_kospi.rename(columns={'Symbol': 'code', 'Name': 'name'})
+        df_kospi['type'] = '.KS'
+        df = df.append(df_kospi, ignore_index=True)
+
+        df_kosdaq = fdr.StockListing('KOSDAQ')
+        df_kosdaq = df_kosdaq[['Symbol', 'Name']]
+        df_kosdaq = df_kosdaq.rename(columns={'Symbol': 'code', 'Name': 'name'})
+        df_kosdaq['type'] = '.KQ'
+        
+        df = df.append(df_kosdaq, ignore_index=True)
         self.m_code_df = df
 
-        for code in self.m_code_df['code']:
-            newDict = {code: None}
-            self.m_day_data.update(newDict)
+        #for code in self.m_code_df['code']:
+        #    self.m_day_data.update({code: None})
 
     def get_codes(self):
         return self.m_code_df['code']
 
+    def get_code_type(self, code):
+        df = self.m_code_df.loc[self.m_code_df['code'] == code]
+        _type = df['type'].values[0]
+        return _type
+
+    def get_codes_len(self):
+        return len(self.m_code_df)
+
+    def get_daily_len(self):
+        return len(self.m_daily_data)
+
+
+
+    def load_save_daily(self, code):
+        isyahoo = False
+        startdate = (datetime.today() - timedelta(days=90)).strftime('%Y-%m-%d')   # 90일 이전 날짜
+        enddate = (datetime.today() - timedelta(days=1)).strftime('%Y-%m-%d')   # 1일 이전 날짜
+
+        path = './daily_data'
+        if os.path.isdir(path) == False:
+            os.makedirs(path)
+        
+        file_name = path + '/{}.csv'.format(code)
+
+        if os.path.isfile(file_name) == True:
+            df = pd.read_csv(file_name)
+
+            if df.empty:
+                isyahoo = True
+            else:
+                last_df = df.iloc[-1]
+                lastday = last_df['Date']
+                if lastday != enddate:
+                    isyahoo = True
+                    startdate = lastday
+        else:
+            isyahoo = True
+
+        if isyahoo == True:
+            df = self.get_daily_yahoo(code, startdate, enddate)
+            if not df is None:
+                df.to_csv(file_name)
+
+        self.m_daily_data.update({code, df})
+
+
+    def get_daily_yahoo(self, code, startdate, enddate):        
+        try:
+            _type = self.get_code_type(code)
+            df = pdr.get_data_yahoo(code + _type, start=startdate, end=enddate, thread=20)
+            return df
+        except Exception as ex:
+            print('[{0}] Error : {1}'.format(code, ex))
+            return None
+
+
+
+
+
+    
+'''
+    def get_daily(self, code, fromdate=None):
+        #if todate is None:
+        #    todate = datetime.today().strftime('%Y-%m-%d')   # 오늘 날짜
+
+        if fromdate is None:
+            fromdate = (datetime.today() - timedelta(days=90)).strftime('%Y-%m-%d')   # 90일 이전 날짜
+
+        if self.m_day_data[code] is None:
+            try:
+                _type = self.get_code_type(code)
+                df = pdr.get_data_yahoo(code + _type, start=fromdate, thread=20)
+
+                df = df[['Adj Close', 'Volume']]
+                df = df.rename(columns={'Adj Close': 'close', 'Volume': 'volume'})
+                df[['close', 'volume']] \
+                    = df[['close', 'volume']].astype(int)
+
+                newDict = {code : df}
+                self.m_day_data.update(newDict)
+            except Exception as ex:
+                print('[{0}] Error : {1}'.format(code, ex))
+                pass
+
+        return self.m_day_data[code]
+'''
+
+
+
+
+'''
     def get_daily_price(self, code, fromdate=None, todate=None):
         if todate is None:
             todate = datetime.today().strftime('%Y-%m-%d')   # 오늘 날짜
@@ -31,9 +140,53 @@ class StockInfo:
         if fromdate is None:
             fromdate = (datetime.today() - timedelta(days=30)).strftime('%Y-%m-%d')   # 30일 이전 날짜
 
-        df = fdr.DataReader(code, '2018')
+        if self.m_day_data[code] is None:
+            try:
+                df = fdr.DataReader(code, fromdate, todate)
+                df = df[['Close', 'Volume']]
+                df = df.rename(columns={'Close': 'close', 'Volume': 'volume'})
+                df[['close', 'volume']] \
+                    = df[['close', 'volume']].astype(int)
 
-        print(df)
+                newDict = {code : df}
+                self.m_day_data.update(newDict)
+            except:
+                pass
+
+        return self.m_day_data[code]
+
+    def get_daily_price_all(self, fromdate=None, todate=None):
+        if todate is None:
+            todate = datetime.today().strftime('%Y-%m-%d')   # 오늘 날짜
+
+        if fromdate is None:
+            fromdate = (datetime.today() - timedelta(days=30)).strftime('%Y-%m-%d')   # 30일 이전 날짜
+
+        try:
+            ticker_list = []
+            for code in self.m_code_df:
+                ticker_list.append(code)
+
+            df_list = [fdr.DataReader(ticker, fromdate, todate)['Close'] for ticker in ticker_list]
+
+            df = pd.concat(df_list, axis=1)
+
+            df = df.dropna()
+
+            print(df)
+
+
+            #df = fdr.DataReader(code, fromdate, todate)
+            #df = df[['Close', 'Volume']]
+            #df = df.rename(columns={'Close': 'close', 'Volume': 'volume'})
+            #df[['close', 'volume']] \
+            #    = df[['close', 'volume']].astype(int)
+
+            #newDict = {code : df}
+            #self.m_day_data.update(newDict)
+        except:
+            pass
+
 
 
 
@@ -72,5 +225,7 @@ class StockInfo:
             self.m_day_data.update(newDict)
 
         return self.m_day_data[code]
-    
+'''
+
+
         
