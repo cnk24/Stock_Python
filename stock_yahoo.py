@@ -1,133 +1,93 @@
+import os
 import pandas as pd
-import requests
-
-from io import BytesIO
+import FinanceDataReader as fdr
 from datetime import datetime, timedelta
+
+from pandas_datareader import data as pdr
+import fix_yahoo_finance as yf
 from stockDB import pgDB
-
-import json
-from pandas.io.json import json_normalize
-import time
-
 
 # PostgreSQL DB 사용
 # Table : stock
-#         - code, date, close, diff, open, high, low, volume
+#         - code, date, open, high, low, close, adj close, volume
 
 
 class StockInfo:
+    m_code_df = []
+    #m_daily_data = dict()
 
     def __init__(self):
+        yf.pdr_override()
         self.load_all_items()
         self.m_StockDB = pgDB()
     
     def load_all_items(self):
-        code_df = pd.read_html('http://kind.krx.co.kr/corpgeneral/corpList.do?method=download&searchType=13', header=0)[0]
-        code_df.종목코드 = code_df.종목코드.map('{:06d}'.format)
-        code_df = code_df[['회사명', '종목코드']]
-        code_df = code_df.rename(columns={'회사명': 'name', '종목코드': 'code'})
+        df = pd.DataFrame()
 
-        full_code_df = self.load_full_code()
-        df = pd.merge(code_df, full_code_df, on='code')        
+        df_kospi = fdr.StockListing('KOSPI')
+        df_kospi = df_kospi[['Symbol', 'Name']]
+        df_kospi = df_kospi.rename(columns={'Symbol': 'code', 'Name': 'name'})
+        df_kospi['type'] = '.KS'
+        df = df.append(df_kospi, ignore_index=True)
+
+        df_kosdaq = fdr.StockListing('KOSDAQ')
+        df_kosdaq = df_kosdaq[['Symbol', 'Name']]
+        df_kosdaq = df_kosdaq.rename(columns={'Symbol': 'code', 'Name': 'name'})
+        df_kosdaq['type'] = '.KQ'
+        
+        df = df.append(df_kosdaq, ignore_index=True)
         self.m_code_df = df
 
-    def load_full_code(self):
-        url_tmpl = 'http://marketdata.krx.co.kr/contents/COM/GenerateOTP.jspx?bld=COM%2Ffinder_stkisu&name=form&_={}' 
-        url = url_tmpl.format( int(time.time() * 1000) )
-        r = requests.get(url)
-
-        down_url = 'http://marketdata.krx.co.kr/contents/MKD/99/MKD99000001.jspx'
-        down_data = {
-            'mktsel':'ALL',
-            'pagePath':'/contents/COM/FinderStkIsu.jsp',
-            'code': r.content,
-            'geFirstCall':'Y',
-        }
-
-        r = requests.post(down_url, down_data)
-        jo = json.loads(r.text)
-        df = json_normalize(jo, 'block1')
-        df['short_code'] = df['short_code'].str[1:]
-        
-        df = df[['full_code', 'marketName', 'short_code']]
-        df = df.rename(columns={'short_code': 'code'})        
-        return df
+        #for code in self.m_code_df['code']:
+        #    self.m_day_data.update({code: None})
 
     def get_codes(self):
         return self.m_code_df['code']
 
+    def get_code_type(self, code):
+        df = self.m_code_df.loc[self.m_code_df['code'] == code]
+        _type = df['type'].values[0]
+        return _type
+
     def get_codes_len(self):
         return len(self.m_code_df)
 
-    def get_full_code(self, code):
-        return self.m_code_df[self.m_code_df['code'] == code].iloc[0]['full_code']
+    #def get_daily_len(self):
+    #    return len(self.m_daily_data)
+
+
 
     def update_daily(self, code):
-        fromdate = (datetime.today() - timedelta(days=90)).strftime('%Y%m%d')   # 90일 이전 날짜
-        todate = (datetime.today() - timedelta(days=1)).strftime('%Y%m%d')   # 1일 이전 날짜
+
+
+        #self.m_StockDB.select_daily(code)
+
+
+
+        startdate = (datetime.today() - timedelta(days=90)).strftime('%Y-%m-%d')   # 90일 이전 날짜
+        enddate = (datetime.today() - timedelta(days=1)).strftime('%Y-%m-%d')   # 1일 이전 날짜
 
         date = self.m_StockDB.select_last_daily_date(code)
-
-        # datetime 으로 변경
-        # todate 보다 작으면
-        # date 1일 이후를 fromdate 로 설정
-        isGetDaily = False
         if not date is None:
-            lastdatetime = datetime.strptime(date, '%Y/%m/%d')
-            todatetime = datetime.strptime(todate, '%Y%m%d')
-            if lastdatetime < todatetime:
-                
+            startdate = date.strftime('%Y-%m-%d')
 
-
-            fromdate = date.strftime('%Y%m%d')
-
-
-        else:
-            isGetDaily = True
-
-
-
-        if isGetDaily == True:
-            df = self.get_daily_krx(code, fromdate, todate)
+        if startdate != enddate:
+            df = self.get_daily_yahoo(code, startdate, enddate)
             if not df is None:
+                df = df.rename(columns={'Open': 'open', 'High': 'high', 'Low': 'low', 'Close': 'close', 'Adj Close': 'adj_close', 'Volume': 'volume'})
                 self.m_StockDB.insert_daily(code, df)
 
+        #self.m_daily_data.update({code, df})
 
-    def get_daily_krx(self, code, fromdate, todate):
+
+    def get_daily_yahoo(self, code, startdate, enddate):        
         try:
-            full_code = self.get_full_code(code)
-
-            # STEP 01: Generate OTP
-            gen_otp_url = "http://marketdata.krx.co.kr/contents/COM/GenerateOTP.jspx"
-            gen_otp_data = {
-                'name':'fileDown',
-                'filetype':'csv',
-                'url':'MKD/04/0402/04020100/mkd04020100t3_02',
-                'isu_cd':full_code,
-                'fromdate':fromdate,
-                'todate':todate,
-            }
-            
-            r = requests.post(gen_otp_url, gen_otp_data)
-            content = r.content  # 리턴받은 값을 아래 요청의 입력으로 사용.
-            
-            # STEP 02: download
-            down_url = 'http://file.krx.co.kr/download.jspx'
-            down_data = {
-                'code': content,
-            }
-            
-            headers = {'Referer': 'http://marketdata.krx.co.kr'}
-            r = requests.post(down_url, down_data, headers=headers)
-            r.encoding = "utf-8-sig"
-
-            df = pd.read_csv(BytesIO(r.content), header=0, thousands=',')
-            df = df[['년/월/일', '종가', '대비', '시가', '고가', '저가', '거래량(주)']]
-            df = df.rename(columns={'년/월/일': 'date', '종가': 'close', '대비': 'diff', '시가': 'open', '고가': 'high', '저가': 'low', '거래량(주)': 'volume'})
+            _type = self.get_code_type(code)
+            df = pdr.get_data_yahoo(code + _type, start=startdate, end=enddate, thread=20)
             return df
         except Exception as ex:
             print('[{0}] Error : {1}'.format(code, ex))
-            return None    
+            return None
 
 
 

@@ -1,0 +1,132 @@
+import psycopg2
+import pandas as pd
+
+# DB
+# PostgreSQL 
+
+class pgDB:
+
+    def __init__(self):
+        f = open('D:/stockDB.info', 'r')
+        self.conn_string = f.readline()
+        self.createTable()
+
+    def createTable(self):
+        commands = (
+            """
+            CREATE TABLE if not exists stock_daily (
+                id SERIAL PRIMARY KEY,
+                code VARCHAR(40) NOT NULL,
+                date VARCHAR(40) NOT NULL,
+                close VARCHAR(40) NOT NULL,
+                diff VARCHAR(40),
+                open VARCHAR(40),
+                high VARCHAR(40),
+                low VARCHAR(40),
+                volume VARCHAR(40)
+            )
+            """,
+            """
+            CREATE TABLE if not exists stock_data (
+                id SERIAL PRIMARY KEY,
+                code VARCHAR(40) NOT NULL,
+                datetime VARCHAR(40) NOT NULL,
+                price VARCHAR(40) NOT NULL,
+                volume VARCHAR(40)
+            )
+            """
+        )
+
+        conn = None
+        try:
+            conn = psycopg2.connect(self.conn_string)
+            cur = conn.cursor()
+            
+            for command in commands:
+                cur.execute(command)
+
+            cur.close()
+            conn.commit()
+        except (Exception, psycopg2.DatabaseError) as error:
+            print(error)
+        finally:
+            if conn is not None:
+                conn.close()
+
+    def select_daily(self, code):
+        query = """
+                SELECT * FROM stock_daily WHERE code = %s ORDER BY date ASC
+                """
+
+        df = pd.DataFrame()
+        conn = None
+        try:
+            conn = psycopg2.connect(self.conn_string)
+            cur = conn.cursor()
+            cur.execute(query, [code])
+            rows = cur.fetchall()
+
+            # 0 : id
+            # 1 : code
+            # 2 : date
+            # 3 : close
+            # 4 : diff
+            # 5 : open
+            # 6 : high
+            # 7 : low
+            # 8 : volume
+            df = df.append(rows)
+            df = df.rename(columns={'0': 'id', '1': 'code', '2': 'date', '3': 'close', '4': 'diff', '5': 'open', '6': 'high', '7': 'low', '8': 'volume'})
+            df = df[['date', 'close', 'volume']]
+            df[['close', 'volume']] \
+                = df[['close', 'volume']].astype(int)
+
+            cur.close()
+        except (Exception, psycopg2.DatabaseError) as error:
+            print(error)
+        finally:
+            if conn is not None:
+                conn.close()
+
+        return df
+
+    def select_last_daily_date(self, code):
+        query = """
+                SELECT * FROM stock_daily WHERE code = %s ORDER BY date DESC LIMIT 1
+                """
+
+        date = None
+        conn = None
+        try:
+            conn = psycopg2.connect(self.conn_string)
+            cur = conn.cursor()
+            cur.execute(query, [code])
+            rows = cur.fetchall()
+            date = rows[0][2] # 2: date
+            cur.close()
+        except (Exception, psycopg2.DatabaseError) as error:
+            print(error)
+        finally:
+            if conn is not None:
+                conn.close()
+
+        return date
+
+    def insert_daily(self, code, df):
+        query = """
+                INSERT INTO stock_daily (date, close, diff, open, high, low, volume, code) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                """
+        df['code'] = code
+
+        conn = None
+        try:
+            conn = psycopg2.connect(self.conn_string)
+            cur = conn.cursor()
+            cur.executemany(query, df.values)
+            cur.close()
+            conn.commit()
+        except (Exception, psycopg2.DatabaseError) as error:
+            print(error)
+        finally:
+            if conn is not None:
+                conn.close()

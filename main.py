@@ -9,10 +9,11 @@ def main():
 
     app = QtWidgets.QApplication(sys.argv)
 
+
     stockInfo = StockInfo()
     #stockInfo.get_daily_price_all()
     #stockInfo.get_daily_price('037460')
-    stockInfo.load_save_daily('001740')
+    #stockInfo.load_save_daily('001740')
 
 
     dialog = InitDialog(stockInfo)
