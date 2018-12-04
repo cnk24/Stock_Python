@@ -47,11 +47,39 @@ class pgDB:
 
             cur.close()
             conn.commit()
-        except (Exception, psycopg2.DatabaseError) as error:
-            print(error)
+        except (Exception, psycopg2.DatabaseError) as error:            
+            print('createTable: {}'.format(error))
         finally:
             if conn is not None:
                 conn.close()
+
+    def select_daily_all(self):
+        query = """
+                SELECT * FROM stock_daily
+                """
+
+        df = pd.DataFrame()
+        conn = None
+        try:
+            conn = psycopg2.connect(self.conn_string)
+            cur = conn.cursor()
+            cur.execute(query)
+            rows = cur.fetchall()
+            
+            df = df.append(rows)
+            df = df.rename(columns={0: 'id', 1: 'code', 2: 'date', 3: 'close', 4: 'diff', 5: 'open', 6: 'high', 7: 'low', 8: 'volume'})
+            df = df[['code', 'date', 'close', 'volume']]
+            df[['close', 'volume']] \
+                = df[['close', 'volume']].astype(int)
+
+            cur.close()
+        except (Exception, psycopg2.DatabaseError) as error:            
+            print('select_daily_all: {}'.format(error))
+        finally:
+            if conn is not None:
+                conn.close()
+
+        return df
 
     def select_daily(self, code):
         query = """
@@ -76,14 +104,14 @@ class pgDB:
             # 7 : low
             # 8 : volume
             df = df.append(rows)
-            df = df.rename(columns={'0': 'id', '1': 'code', '2': 'date', '3': 'close', '4': 'diff', '5': 'open', '6': 'high', '7': 'low', '8': 'volume'})
+            df = df.rename(columns={0: 'id', 1: 'code', 2: 'date', 3: 'close', 4: 'diff', 5: 'open', 6: 'high', 7: 'low', 8: 'volume'})
             df = df[['date', 'close', 'volume']]
             df[['close', 'volume']] \
                 = df[['close', 'volume']].astype(int)
 
             cur.close()
-        except (Exception, psycopg2.DatabaseError) as error:
-            print(error)
+        except (Exception, psycopg2.DatabaseError) as error:            
+            print('select_daily: {}'.format(error))
         finally:
             if conn is not None:
                 conn.close()
@@ -105,7 +133,7 @@ class pgDB:
             date = rows[0][2] # 2: date
             cur.close()
         except (Exception, psycopg2.DatabaseError) as error:
-            print(error)
+            print('select_last_daily_date: {}'.format(error))
         finally:
             if conn is not None:
                 conn.close()
@@ -125,8 +153,54 @@ class pgDB:
             cur.executemany(query, df.values)
             cur.close()
             conn.commit()
+        except (Exception, psycopg2.DatabaseError) as error:            
+            print('insert_daily: {}'.format(error))
+        finally:
+            if conn is not None:
+                conn.close()
+
+    def select_daily_lastdate(self):
+        query = """
+                SELECT date FROM stock_daily WHERE code = 'LAST'
+                """
+
+        date = None
+        conn = None
+        try:
+            conn = psycopg2.connect(self.conn_string)
+            cur = conn.cursor()
+            cur.execute(query)
+            rows = cur.fetchone()
+            date = rows[0]
+            cur.close()
         except (Exception, psycopg2.DatabaseError) as error:
-            print(error)
+            print('select_daily_lastdate: {}'.format(error))
+        finally:
+            if conn is not None:
+                conn.close()
+        return date
+    
+    def update_daily_lastdate(self, date):
+        query = None
+        lastdate = self.select_daily_lastdate()
+        if lastdate is None:
+            query = """
+                    INSERT INTO stock_daily (code, date, close) VALUES ('LAST', %s, '0')
+                    """
+        else:
+            query = """
+                    UPDATE stock_daily SET date = %s WHERE code = 'LAST'
+                    """
+
+        conn = None
+        try:
+            conn = psycopg2.connect(self.conn_string)
+            cur = conn.cursor()
+            cur.execute(query, [date])
+            cur.close()
+            conn.commit()
+        except (Exception, psycopg2.DatabaseError) as error:
+            print('update_daily_lastdate: {}'.format(error))
         finally:
             if conn is not None:
                 conn.close()

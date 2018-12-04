@@ -20,4 +20,10 @@ class CWindow(QtWidgets.QWidget):
         self.logDebug = MyLogger('debug')
         self.logDebug.SetLogView(self.debugLog)
 
+    def log_debug(self, msg):
+        self.logDebug.debug(msg)
+
+    def log_buysell(self, msg):
+        self.logBuySell.info(msg)
+
         

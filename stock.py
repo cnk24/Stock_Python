@@ -62,36 +62,54 @@ class StockInfo:
     def get_full_code(self, code):
         return self.m_code_df[self.m_code_df['code'] == code].iloc[0]['full_code']
 
+    def is_last_update(self):
+        today = datetime.today().strftime('%Y/%m/%d')
+
+        lastdate = self.m_StockDB.select_daily_lastdate()
+        if not lastdate is None:
+            lastdatetime = datetime.strptime(lastdate, '%Y/%m/%d')
+            todaytime = datetime.strptime(today, '%Y/%m/%d')
+            if lastdatetime < todaytime:
+                return False
+        else:
+            return False
+
+        return True
+
+    def update_last_date(self):
+        today = datetime.today().strftime('%Y/%m/%d')
+        self.m_StockDB.update_daily_lastdate(today)
+
     def update_daily(self, code):
         fromdate = (datetime.today() - timedelta(days=90)).strftime('%Y%m%d')   # 90일 이전 날짜
-        todate = (datetime.today() - timedelta(days=1)).strftime('%Y%m%d')   # 1일 이전 날짜
+
+        todate = None
+        wday = datetime.today().weekday()
+        if wday == 0: # 월요일
+            todate = (datetime.today() - timedelta(days=3)).strftime('%Y%m%d')
+        else:
+            todate = (datetime.today() - timedelta(days=1)).strftime('%Y%m%d')   # 1일 이전 날짜
 
         date = self.m_StockDB.select_last_daily_date(code)
 
         # datetime 으로 변경
         # todate 보다 작으면
-        # date 1일 이후를 fromdate 로 설정
+        # date 1일 이후를 fromdate 로 설정        
         isGetDaily = False
         if not date is None:
             lastdatetime = datetime.strptime(date, '%Y/%m/%d')
             todatetime = datetime.strptime(todate, '%Y%m%d')
             if lastdatetime < todatetime:
-                
-
-
-            fromdate = date.strftime('%Y%m%d')
-
-
+                isGetDaily = True
+                fromdate = (lastdatetime + timedelta(days=1)).strftime('%Y%m%d')
         else:
             isGetDaily = True
-
-
 
         if isGetDaily == True:
             df = self.get_daily_krx(code, fromdate, todate)
             if not df is None:
                 self.m_StockDB.insert_daily(code, df)
-
+        
 
     def get_daily_krx(self, code, fromdate, todate):
         try:
@@ -128,6 +146,43 @@ class StockInfo:
         except Exception as ex:
             print('[{0}] Error : {1}'.format(code, ex))
             return None    
+
+
+    # 이동 평균 구하기
+    def calMovingAverage(self, code, t):
+        df = self.m_StockDB.select_daily(code)
+        ma = df.close.ewm(span=t).mean()
+        return ma
+
+    # 상승장/하락장
+    def getUpDownStock(self, code, price, day):
+        ma = self.calMovingAverage(code, day)
+        last_ma = ma[-1]
+
+        state = None
+        if price > last_ma:
+            state = 'UP'
+        else:
+            state = 'DOWN'
+        return state
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

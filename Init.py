@@ -14,16 +14,19 @@ class Worker(QtCore.QThread):
 
     def run(self):
         while True:
-            cnt = 0
-            codes = self.stockInfo.get_codes()
-            for code in codes:
-                self.stockInfo.update_daily(code)
+            if self.stockInfo.is_last_update() == False:
+                cnt = 0
+                codes = self.stockInfo.get_codes()
+                for code in codes:
+                    self.stockInfo.update_daily(code)
 
-                cnt += 1
-                pos = (cnt / len(codes)) * 100
-                self.change_value.emit(pos)
-                self.msleep(50)
+                    cnt += 1
+                    pos = (cnt / len(codes)) * 100
+                    self.change_value.emit(pos)
+                    #self.msleep(50)
 
+                self.stockInfo.update_last_date()
+            
             self.finished.emit()
             break
 
@@ -41,7 +44,7 @@ class InitDialog(QtWidgets.QDialog):
 
 
     @QtCore.pyqtSlot()
-    def Finish(self):
+    def Finish(self):        
         self.close()
         
 
