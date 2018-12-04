@@ -204,3 +204,23 @@ class pgDB:
         finally:
             if conn is not None:
                 conn.close()
+
+
+    # 실시간 데이터 DB 저장
+    def insert_real_data(self, code, price, volume):
+        query = """
+                INSERT INTO stock_data (code, price, volume, datetime) VALUES (%s, %s, %s, now())
+                """
+
+        conn = None
+        try:
+            conn = psycopg2.connect(self.conn_string)
+            cur = conn.cursor()
+            cur.execute(query, [code, price, volume])
+            cur.close()
+            conn.commit()
+        except (Exception, psycopg2.DatabaseError) as error:            
+            print('insert_real_data: {}'.format(error))
+        finally:
+            if conn is not None:
+                conn.close()

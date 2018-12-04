@@ -1,6 +1,12 @@
 from PyQt5 import QAxContainer
 from PyQt5 import QtCore
 from pandas import DataFrame
+from stockDB import pgDB
+
+
+'''
+파이썬 32비트에서만 구동됨
+'''
 
 
 class Kiwoom(QAxContainer.QAxWidget):
@@ -8,6 +14,7 @@ class Kiwoom(QAxContainer.QAxWidget):
     def __init__(self, window):
         super().__init__()
         self.log = window
+        self.m_StockDB = pgDB()
 
         self.setControl("KHOPENAPI.KHOpenAPICtrl.1")
 
@@ -62,6 +69,13 @@ class Kiwoom(QAxContainer.QAxWidget):
 
     def log_buysell(self, msg):
         self.log.log_buysell(msg)
+
+    ###############################################################
+    # DB 메서드 정의                                               #
+    ###############################################################
+
+    def insert_real_data(self, code, price, volume):
+        self.m_StockDB.insert_real_data(code, price, volume)
 
     ###############################################################
     # 이벤트 정의                                                    #

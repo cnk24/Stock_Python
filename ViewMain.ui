@@ -6,52 +6,67 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1024</width>
-    <height>768</height>
+    <width>800</width>
+    <height>600</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Form</string>
   </property>
-  <widget class="QListWidget" name="buyList">
+  <widget class="QPlainTextEdit" name="socketLog">
    <property name="geometry">
     <rect>
-     <x>10</x>
-     <y>10</y>
-     <width>201</width>
-     <height>431</height>
-    </rect>
-   </property>
-  </widget>
-  <widget class="QListWidget" name="sellList">
-   <property name="geometry">
-    <rect>
-     <x>215</x>
-     <y>10</y>
-     <width>201</width>
-     <height>431</height>
-    </rect>
-   </property>
-  </widget>
-  <widget class="QPlainTextEdit" name="buysellLog">
-   <property name="geometry">
-    <rect>
-     <x>10</x>
-     <y>450</y>
-     <width>471</width>
-     <height>311</height>
+     <x>230</x>
+     <y>300</y>
+     <width>561</width>
+     <height>291</height>
     </rect>
    </property>
   </widget>
   <widget class="QPlainTextEdit" name="debugLog">
    <property name="geometry">
     <rect>
-     <x>490</x>
-     <y>450</y>
-     <width>531</width>
-     <height>311</height>
+     <x>230</x>
+     <y>10</y>
+     <width>561</width>
+     <height>281</height>
     </rect>
    </property>
+  </widget>
+  <widget class="QTableWidget" name="targetList">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>10</y>
+     <width>211</width>
+     <height>581</height>
+    </rect>
+   </property>
+   <property name="rowCount">
+    <number>1</number>
+   </property>
+   <property name="columnCount">
+    <number>3</number>
+   </property>
+   <attribute name="horizontalHeaderDefaultSectionSize">
+    <number>60</number>
+   </attribute>
+   <row/>
+   <column>
+    <property name="text">
+     <string>code</string>
+    </property>
+   </column>
+   <column>
+    <property name="text">
+     <string>price</string>
+    </property>
+   </column>
+   <column>
+    <property name="text">
+     <string>buy/sell</string>
+    </property>
+   </column>
   </widget>
  </widget>
  <resources/>
