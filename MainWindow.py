@@ -3,6 +3,7 @@ from PyQt5 import QtWidgets
 from PyQt5 import QtCore
 from time import localtime, strftime
 from logger import MyLogger
+from common import *
 
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
@@ -26,26 +27,15 @@ class CWindow(QtWidgets.QWidget):
     def log_socket(self, msg):
         self.logSocket.info(msg)
 
-    def add_target(self, code, price, _type):
-        if _type not in TypeList.TYPE:
+    def add_target(self, code, price, order_type):
+        if order_type not in OrderTypeList.TYPE:
             return
 
         # Socket Send
 
         rowPosition = 0 #self.table.rowCount()
         self.targetList.insertRow(rowPosition)
-        self.targetList.setItem(rowPosition, 0, QtWidgets.QTableWidgetItem(code)) # code
-        self.targetList.setItem(rowPosition, 1, QtWidgets.QTableWidgetItem(price)) # price
-        self.targetList.setItem(rowPosition, 2, QtWidgets.QTableWidgetItem(_type)) # type
+        self.targetList.setItem(rowPosition, 0, QtWidgets.QTableWidgetItem(code)) # 종목코드
+        self.targetList.setItem(rowPosition, 1, QtWidgets.QTableWidgetItem(price)) # 현재가
+        self.targetList.setItem(rowPosition, 2, QtWidgets.QTableWidgetItem(order_type)) # 주문타입
 
-
-
-
-
-class TypeList(object):
-    TYPE = {
-        1: '매수',
-        2: '매도'
-    }
-
-        
