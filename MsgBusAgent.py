@@ -18,7 +18,7 @@ class MsgBusAgent():
     def SendOutMessage(self, code, price, order_type):
         # code = 종목코드
         # price = 현재가
-        # _type = 매수/매도
+        # order_type = 1:매수 2:매도
         msgName = OrderTypeList.TYPE[order_type]
         msg = '{0}/{1}'.format(code, price)
         MsgBusAgent.__dimMsgSender.FireMessage(msgName, msg)

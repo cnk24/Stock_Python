@@ -31,7 +31,8 @@ class CWindow(QtWidgets.QWidget):
         if order_type not in OrderTypeList.TYPE:
             return
 
-        # Socket Send
+        # Send To KiwoomApi
+        
 
         rowPosition = 0 #self.table.rowCount()
         self.targetList.insertRow(rowPosition)
