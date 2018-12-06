@@ -7,8 +7,12 @@ import pandas as pd
 class pgDB:
 
     def __init__(self):
+        dbInfo = []
         f = open('D:/stockDB.info', 'r')
-        self.conn_string = f.readline()
+        for info in f.readlines():
+            dbInfo.append(info.strip())
+
+        self.conn_string = 'host={0} dbname={1} user={2} password={3}'.format(dbInfo[0], dbInfo[1], dbInfo[2], dbInfo[3])
         self.createTable()
 
     def createTable(self):
